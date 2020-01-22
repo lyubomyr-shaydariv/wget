@@ -299,6 +299,7 @@ static struct cmdline_option option_data[] =
     { "content-on-error", 0, OPT_BOOLEAN, "contentonerror", -1 },
     { "cookies", 0, OPT_BOOLEAN, "cookies", -1 },
     IF_SSL ( "crl-file", 0, OPT_VALUE, "crlfile", -1 )
+    { "custom-html-attrs", 0, OPT_VALUE, "customhtmlattrs", -1 },
     { "cut-dirs", 0, OPT_VALUE, "cutdirs", -1 },
     { "debug", 'd', OPT_BOOLEAN, "debug", -1 },
     { "default-page", 0, OPT_VALUE, "defaultpage", -1 },
@@ -1016,6 +1017,8 @@ Recursive accept/reject:\n"),
        --follow-tags=LIST          comma-separated list of followed HTML tags\n"),
     N_("\
        --ignore-tags=LIST          comma-separated list of ignored HTML tags\n"),
+    N_("\
+       --custom-html-attrs=LIST    comma-separated list of new followed HTML attributes\n"),
     N_("\
   -H,  --span-hosts                go to foreign hosts when recursive\n"),
     N_("\
