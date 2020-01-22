@@ -179,6 +179,7 @@ static const struct {
 #ifdef HAVE_SSL
   { "crlfile",          &opt.crl_file,          cmd_file_once },
 #endif
+  { "customhtmlattrs",  &opt.custom_html_attrs, cmd_vector },
   { "cutdirs",          &opt.cut_dirs,          cmd_number },
   { "debug",            &opt.debug,             cmd_boolean },
   { "defaultpage",      &opt.default_page,      cmd_string },
@@ -2000,6 +2001,7 @@ cleanup (void)
   free_vec (opt.exclude_domains);
   free_vec (opt.follow_tags);
   free_vec (opt.ignore_tags);
+  free_vec (opt.custom_html_attrs);
   xfree (opt.progress_type);
   xfree (opt.warc_filename);
   xfree (opt.warc_tempdir);

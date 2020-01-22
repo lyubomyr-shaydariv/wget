@@ -112,6 +112,7 @@ struct options
 
   char **follow_tags;           /* List of HTML tags to recursively follow. */
   char **ignore_tags;           /* List of HTML tags to ignore if recursing. */
+  char **custom_html_attrs;     /* List of custom HTML tags and attributes delimited by '/'. */
 
   bool follow_ftp;              /* Are FTP URL-s followed in recursive
                                    retrieving? */

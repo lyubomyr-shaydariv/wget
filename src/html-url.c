@@ -87,6 +87,8 @@ enum {
   TAG_SOURCE
 };
 
+static const int LAST_KNOWN_TAG_ID = TAG_SOURCE;
+
 /* The list of known tags and functions used for handling them.  Most
    tags are simply harvested for URLs. */
 static struct known_tag {
@@ -140,7 +142,7 @@ static struct known_tag {
 
 /* For tags handled by tag_find_urls: attributes that contain URLs to
    download. */
-static struct {
+static struct known_attribute {
   int tagid;
   const char *attr_name;
   int flags;
@@ -187,12 +189,95 @@ static const char *additional_attributes[] = {
   "srcset",                     /* used by tag_handle_img */
 };
 
+static unsigned int custom_tag_and_attribute_count;
+static struct known_tag *custom_tags;
+static struct known_attribute *custom_attributes;
+
 static struct hash_table *interesting_tags;
 static struct hash_table *interesting_attributes;
 
 /* Will contains the (last) charset found in 'http-equiv=content-type'
    meta tags  */
 static char *meta_charset;
+
+static void
+init_custom_tags_and_attributes (void)
+{
+  unsigned int i = 0;
+  size_t len = 0;
+  const int *next_free_tagid;
+  char **custom;
+  char *name;
+
+  if (!opt.custom_html_attrs)
+    return;
+
+  /* Count the number of recognized tag/attribute pairs first.  */
+  for (i = 0, custom = opt.custom_html_attrs; *custom; custom++)
+    {
+      const char *delim_start = strchr (*custom, '/');
+      if (!delim_start)
+        ; // TODO handle missing delimiter
+      else
+        i++;
+    }
+
+  if (!i)
+    return;
+
+  custom_tag_and_attribute_count = i;
+  custom_tags = xnew_array (struct known_tag, custom_tag_and_attribute_count);
+  custom_attributes = xnew_array (struct known_attribute, custom_tag_and_attribute_count);
+
+  /* Allocate a temporary buffer of new tag IDs to refer as values
+     from the hash table below.  */
+  int *tmp_free_tagids = xnew_array (int, custom_tag_and_attribute_count);
+  for (i = 0; i < custom_tag_and_attribute_count; i++)
+    tmp_free_tagids[i] = LAST_KNOWN_TAG_ID + i + 1;
+  next_free_tagid = tmp_free_tagids;
+
+  struct hash_table *tmp_tag_to_tagid = make_nocase_string_hash_table (countof (known_tags));
+  for (i = 0; i < countof (known_tags); i++)
+    hash_table_put (tmp_tag_to_tagid, known_tags[i].name, &known_tags[i].tagid);
+
+  for (i = 0, custom = opt.custom_html_attrs; *custom; custom++)
+    {
+      const char * const delim_start = strchr (*custom, '/');
+      const int * tagid;
+      if (!delim_start)
+        continue;
+
+      /* Split the pattern and take and create the left substring as
+         a tag name, and then check if a particular tag ID can be reused
+         or a new one must be created.  */
+      len = delim_start - *custom;
+      name = xmemdup (*custom, len + 1);
+      name[len] = '\0';
+      tagid = hash_table_get (tmp_tag_to_tagid, name);
+      if (!tagid)
+        {
+          tagid = next_free_tagid;
+          hash_table_put (tmp_tag_to_tagid, name, tagid);
+          next_free_tagid++;
+        }
+      custom_tags[i].tagid = *tagid;
+      custom_tags[i].name = name;
+      custom_tags[i].handler = tag_find_urls;
+
+      /* Now take the right substring as a tag attribute name.  */
+      len = strlen (delim_start + 1);
+      name = xmemdup (delim_start + 1, len + 1);
+      name[len] = '\0';
+      custom_attributes[i].tagid = *tagid;
+      custom_attributes[i].attr_name = name;
+      custom_attributes[i].flags = ATTR_HTML; /* Covers ATTR_INLINE anyway. */
+
+      i++;
+    }
+
+    xfree (tmp_free_tagids);
+    hash_table_destroy (tmp_tag_to_tagid);
+}
 
 static void
 init_interesting (void)
@@ -213,6 +298,9 @@ init_interesting (void)
      respective entries in known_tags.  */
   for (i = 0; i < countof (known_tags); i++)
     hash_table_put (interesting_tags, known_tags[i].name, known_tags + i);
+
+  for (i = 0; i < custom_tag_and_attribute_count; i++)
+    hash_table_put (interesting_tags, custom_tags[i].name, custom_tags + i);
 
   /* Then remove the tags ignored through --ignore-tags.  */
   if (opt.ignore_tags)
@@ -247,6 +335,8 @@ init_interesting (void)
   for (i = 0; i < countof (tag_url_attributes); i++)
     hash_table_put (interesting_attributes,
                     tag_url_attributes[i].attr_name, "1");
+  for (i = 0; i < custom_tag_and_attribute_count; i++)
+    hash_table_put (interesting_attributes, custom_attributes[i].attr_name, "1");
 }
 
 /* Find the value of attribute named NAME in the taginfo TAG.  If the
@@ -421,15 +511,20 @@ check_style_attr (struct taginfo *tag, struct map_context *ctx)
 static void
 tag_find_urls (int tagid, struct taginfo *tag, struct map_context *ctx)
 {
+  int is_known = tagid <= LAST_KNOWN_TAG_ID;
   size_t i;
   int attrind;
   int first = -1;
+  const size_t size = is_known ? countof (tag_url_attributes)
+                               : custom_tag_and_attribute_count;
+  const struct known_attribute *attributes = is_known ? tag_url_attributes
+                                                      : custom_attributes;
 
-  for (i = 0; i < countof (tag_url_attributes); i++)
-    if (tag_url_attributes[i].tagid == tagid)
+  for (i = 0; i < size; i++)
+    if (attributes[i].tagid == tagid)
       {
-        /* We've found the index of tag_url_attributes where the
-           attributes of our tag begin.  */
+        /* We've found the index of tag_url_attributes or
+           custom_attributes where the attributes of our tag begin.  */
         first = i;
         break;
       }
@@ -449,22 +544,21 @@ tag_find_urls (int tagid, struct taginfo *tag, struct map_context *ctx)
       /* Find whether TAG/ATTRIND is a combination that contains a
          URL. */
       char *link = tag->attrs[attrind].value;
-      const size_t size = countof (tag_url_attributes);
 
       /* If you're cringing at the inefficiency of the nested loops,
          remember that they both iterate over a very small number of
          items.  The worst-case inner loop is for the IMG tag, which
          has three attributes.  */
-      for (i = first; i < size && tag_url_attributes[i].tagid == tagid; i++)
+      for (i = first; i < size && attributes[i].tagid == tagid; i++)
         {
           if (0 == strcasecmp (tag->attrs[attrind].name,
-                               tag_url_attributes[i].attr_name))
+                               attributes[i].attr_name))
             {
               struct urlpos *up = append_url (link, ATTR_POS(tag,attrind,ctx),
                                               ATTR_SIZE(tag,attrind), ctx);
               if (up)
                 {
-                  int flags = tag_url_attributes[i].flags;
+                  int flags = attributes[i].flags;
                   if (flags & ATTR_INLINE)
                     up->link_inline_p = 1;
                   if (flags & ATTR_HTML)
@@ -815,6 +909,9 @@ get_urls_html_fm (const char *file, const struct file_memory *fm,
   ctx.document_file = file;
   ctx.nofollow = false;
 
+  if (!custom_tags && !custom_attributes)
+    init_custom_tags_and_attributes ();
+
   if (!interesting_tags)
     init_interesting ();
 
@@ -967,6 +1064,24 @@ get_urls_file (const char *file, bool *read_again)
 void
 cleanup_html_url (void)
 {
+  /* Destroy the dynamic arrays for custom tags and attributes
+     allocated in the initialization routine.  */
+  if (custom_tags)
+    {
+      unsigned int i;
+      for (i = 0; i < custom_tag_and_attribute_count; i++) {
+        xfree (custom_tags[i].name);
+      }
+      xfree (custom_tags);
+    }
+  if (custom_attributes)
+    {
+      unsigned int i;
+      for (i = 0; i < custom_tag_and_attribute_count; i++) {
+        xfree (custom_attributes[i].attr_name);
+      }
+      xfree (custom_attributes);
+    }
   /* Destroy the hash tables.  The hash table keys and values are not
      allocated by this code, so we don't need to free them here.  */
   if (interesting_tags)
