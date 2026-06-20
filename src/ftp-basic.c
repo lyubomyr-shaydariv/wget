@@ -204,12 +204,11 @@ ftp_login (int csock, const char *acc, const char *pass)
       "331 s/key ",
       "331 opiekey "
     };
-    size_t i;
     const char *seed = NULL;
 
-    for (i = 0; i < countof (skey_head); i++)
+    for (size_t i = 0; i < countof (skey_head); i++)
       {
-        int l = strlen (skey_head[i]);
+        size_t l = strlen (skey_head[i]);
         if (0 == c_strncasecmp (skey_head[i], respline, l))
           {
             seed = respline + l;
@@ -222,7 +221,15 @@ ftp_login (int csock, const char *acc, const char *pass)
 
         /* Extract the sequence from SEED.  */
         for (; c_isdigit (*seed); seed++)
-          skey_sequence = 10 * skey_sequence + *seed - '0';
+          {
+            skey_sequence = 10 * skey_sequence + *seed - '0';
+            if (skey_sequence > 9999)
+              {
+                xfree (respline);
+                return FTPLOGREFUSED;
+              }
+          }
+
         if (*seed == ' ')
           ++seed;
         else
