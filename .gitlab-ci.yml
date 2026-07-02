@@ -361,6 +361,7 @@ CoverageReports:
 #        - master
 
 MinGW64:
+    timeout: 10m
     stage: test-from-tarball
     image: $CI_REGISTRY/$BUILD_IMAGES_PROJECT:$MINGW_BUILD
     variables:
