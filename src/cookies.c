@@ -779,7 +779,7 @@ cookie_handle_set_cookie (struct cookie_jar *jar,
           logprintf (LOG_NOTQUIET,
                      _("%s\n"),
                      quotearg_style (escape_quoting_style, cookie->domain));
-          cookie->discard_requested = true;
+          goto out;
         }
     }
 
