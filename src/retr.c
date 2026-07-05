@@ -373,10 +373,11 @@ fd_read_body (const char *downloaded_filename, int fd, FILE *out, wgint toread, 
               else if (out2 != NULL)
                 fwrite (line, 1, strlen (line), out2);
 
-              remaining_chunk_size = strtol (line, &endl, 16);
+              errno = 0;
+              remaining_chunk_size = str_to_wgint (line, &endl, 16);
               xfree (line);
 
-              if (remaining_chunk_size < 0)
+              if (remaining_chunk_size < 0 || errno == ERANGE)
                 {
                   ret = -1;
                   break;

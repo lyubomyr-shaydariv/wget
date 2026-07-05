@@ -1009,10 +1009,11 @@ skip_short_body (int fd, wgint contlen, bool chunked)
               if (line == NULL)
                 break;
 
-              remaining_chunk_size = strtol (line, &endl, 16);
+              errno = 0;
+              remaining_chunk_size = str_to_wgint (line, &endl, 16);
               xfree (line);
 
-              if (remaining_chunk_size < 0)
+              if (remaining_chunk_size < 0 || errno == ERANGE)
                 return false;
 
               if (remaining_chunk_size == 0)
