@@ -82,6 +82,35 @@ clean_line (char *line, int len)
   return len;
 }
 
+/* Return true if TARGET is not safe to use as the target of a
+   symbolic link created locally to mirror a symlink reported by an
+   FTP server: an absolute path, or a relative path containing a ".."
+   path component, can point outside of the download directory.  A
+   malicious or compromised FTP server could otherwise use a crafted
+   directory listing to make Wget create a symlink pointing anywhere
+   on the local file system.  */
+static bool
+ftp_ls_unsafe_symlink_target (const char *target)
+{
+  const char *p;
+
+  if (!*target)
+    return true;
+
+  if (*target == '/')
+    return true;
+
+  for (p = target; *p; p++)
+    {
+      if (p[0] == '.' && p[1] == '.'
+          && (p[2] == '\0' || p[2] == '/')
+          && (p == target || p[-1] == '/'))
+        return true;
+    }
+
+  return false;
+}
+
 /* Convert the Un*x-ish style directory listing stored in FILE to a
    linked list of fileinfo (system-independent) entries.  The contents
    of FILE are considered to be produced by the standard Unix `ls -la'
@@ -291,6 +320,18 @@ ftp_parse_unix_ls (FILE *fp, int ignore_perms)
                       p = strstr (tok, " -> ");
                       if (!p)
                         {
+                          error = 1;
+                          break;
+                        }
+                      /* Reject symlink targets that could escape the
+                         download directory (absolute paths, or paths
+                         containing a ".." component) before storing
+                         them; they are later passed directly to
+                         symlink().  */
+                      if (ftp_ls_unsafe_symlink_target (p + 4))
+                        {
+                          DEBUGP (("Rejecting unsafe symlink target: %s\n",
+                                   p + 4));
                           error = 1;
                           break;
                         }
