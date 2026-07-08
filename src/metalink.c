@@ -1061,7 +1061,7 @@ clean_metalink_string (char **str)
   /* If we are at the end of the string, search the first legit
      character going backward.  */
   if (*end == '\0')
-    while (end > beg && !isspace(*(end - 1)))
+    while (end > beg && isspace(*(end - 1)))
       end--;
 
   new = xmemdup0 (beg, end - beg);
