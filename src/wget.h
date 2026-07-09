@@ -224,7 +224,7 @@ static inline unsigned char _unhex(unsigned char c)
     void *basevar_new = xrealloc (basevar, DR_newsize * sizeof (type)); \
     assert(basevar_new);                                        \
     if (basevar_new != basevar) {                               \
-      memset (basevar_new + sizevar_old * sizeof (type), 0, (DR_newsize - sizevar_old) * sizeof (type)); \
+      memset (((char *) basevar_new) + sizevar_old * sizeof (type), 0, (DR_newsize - sizevar_old) * sizeof (type)); \
       basevar = basevar_new;                                    \
     }                                                           \
   }                                                             \
