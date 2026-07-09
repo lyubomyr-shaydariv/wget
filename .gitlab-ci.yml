@@ -92,6 +92,29 @@ Build-Tarball:
         paths:
             - wget-*.gz
 
+# Create the tarball for libmetalink.
+Build-Libmetalink:
+    stage: test-from-git
+    image: $CI_REGISTRY/$BUILD_IMAGES_PROJECT:$BOOTSTRAP_BUILD
+    script:
+        - export CFLAGS=$CFLAGS_DEFAULT
+        - apt-get update && apt-get install -y libxml2-dev libtool libtool-bin
+        - git clone https://github.com/metalink-dev/libmetalink && cd libmetalink
+        - wget -O m4/libxml2.m4 'https://gitlab.gnome.org/GNOME/libxml2/-/raw/2.9/libxml.m4'
+        - ./buildconf
+        - ./configure
+        - make -j$(nproc)
+        - make -j$(nproc) dist
+        - mv libmetalink-*.gz ..
+    except:
+        - coverity-scan@gnuwget/wget
+    artifacts:
+        when: always
+        expire_in: 2 weeks
+        paths:
+            - libmetalink-*.gz
+            - ./*.log
+
 Valgrind:
     stage: test-from-tarball
     image: $CI_REGISTRY/$BUILD_IMAGES_PROJECT:$DEBIAN_TESTING_BUILD
@@ -178,6 +201,12 @@ Debian-Stable:
         GIT_STRATEGY: none
     script:
         - export CFLAGS=$CFLAGS_DEFAULT
+        - apt-get update && apt-get install -y libxml2-dev expat
+        - tar xf libmetalink-*.gz
+        - cd libmetalink-*/
+        - ./configure
+        - make -j$(nproc) && make install && ldconfig
+        - cd ..
         - tar xf wget-*.gz
         - cd wget-*/
         - ./configure $CONFIGURE_BASE_FLAGS --cache-file ../cache/config.cache
@@ -186,7 +215,8 @@ Debian-Stable:
         - coverity-scan@gnuwget/wget
     dependencies:
         - Build-Tarball
-    needs: ["Build-Tarball"]
+        - Build-Libmetalink
+    needs: ["Build-Tarball", "Build-Libmetalink"]
     artifacts:
         expire_in: 2 weeks
         when: on_failure
