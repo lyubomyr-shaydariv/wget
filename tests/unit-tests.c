@@ -107,7 +107,7 @@ main (int argc _GL_UNUSED, const char *argv[])
 
   printf ("Tests run: %d\n", tests_run);
 
-  return result != 0;
+  return result != NULL;
 }
 
 /*
