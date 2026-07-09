@@ -1934,7 +1934,7 @@ cleanup (void)
     return; /* cleanup() must not be called twice */
 
   /* Close WARC file. */
-  if (opt.warc_filename != 0)
+  if (opt.warc_filename != NULL)
     warc_close ();
 
   log_close ();
