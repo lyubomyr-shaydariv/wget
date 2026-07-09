@@ -1921,9 +1921,6 @@ decode_string (const char *val, const struct decode_item *items, int itemcount,
   return false;
 }
 
-extern struct ptimer *timer;
-extern int cleaned_up;
-
 /* Free the memory allocated by global variables.  */
 void
 cleanup (void)

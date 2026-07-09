@@ -248,6 +248,9 @@ static inline unsigned char _unhex(unsigned char c)
 extern const char *exec_name;
 extern const char *program_name;
 extern const char *program_argstring;
+extern int cleaned_up;
+extern void *ares;
+extern struct ptimer *timer;
 
 /* Document type ("dt") flags */
 enum
