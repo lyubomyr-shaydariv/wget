@@ -46,6 +46,7 @@ as that of the covered work.  */
 #include "c-strcase.h"
 #include <errno.h>
 #include <unistd.h> /* For unlink.  */
+#include <ctype.h>
 #include <metalink/metalink_parser.h>
 #ifdef HAVE_GPGME
 #include <gpgme.h>
