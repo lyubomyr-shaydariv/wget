@@ -2263,10 +2263,10 @@ xsleep (double seconds)
       /* On some systems, usleep cannot handle values larger than
          1,000,000.  If the period is larger than that, use sleep
          first, then add usleep for subsecond accuracy.  */
-      sleep (seconds);
-      seconds -= (long) seconds;
+      sleep ((unsigned) seconds);
+      seconds -= (unsigned) seconds;
     }
-  usleep (seconds * 1000000);
+  usleep ((useconds_t) (seconds * 1000000));
 #else /* fall back select */
   /* Note that, although Windows supports select, it can't be used to
      implement sleeping because Winsock's select doesn't implement
