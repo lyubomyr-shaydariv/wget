@@ -2559,7 +2559,7 @@ has_insecure_name_p (const char *s)
   if (*s == '/')
     return true;
 
-  if (strstr (s, "../") != 0)
+  if (strstr (s, "../") != NULL)
     return true;
 
   return false;
