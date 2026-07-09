@@ -1695,7 +1695,7 @@ for details.\n\n"));
            }
     }
 
-  if (opt.warc_filename != 0)
+  if (opt.warc_filename != NULL)
     {
       if (opt.noclobber)
         {
@@ -1725,7 +1725,7 @@ for details.\n\n"));
           opt.always_rest = false;
           opt.start_pos = -1;
         }
-      if (opt.warc_cdx_dedup_filename != 0 && !opt.warc_digests_enabled)
+      if (opt.warc_cdx_dedup_filename != NULL && !opt.warc_digests_enabled)
         {
           fprintf (stderr,
                    _("Digests are disabled; WARC deduplication will "
@@ -1950,7 +1950,7 @@ for details.\n\n"));
     set_progress_implementation (opt.progress_type);
 
   /* Open WARC file. */
-  if (opt.warc_filename != 0)
+  if (opt.warc_filename != NULL)
     warc_init ();
 
   DEBUGP (("DEBUG output created by Wget %s on %s.\n\n",
