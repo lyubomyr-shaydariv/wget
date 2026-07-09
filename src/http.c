@@ -1,4 +1,4 @@
-/* HTTP support.
+		/* HTTP support.
    Copyright (C) 1996-2012, 2014-2015, 2018-2024, 2026 Free Software
    Foundation, Inc.
 
@@ -2164,7 +2164,7 @@ establish_connection (const struct url *u, const struct url **conn_ref,
                               aprintf ("%s:%d", u->host, u->port),
                               rel_value);
 
-          write_error = request_send (connreq, sock, 0);
+          write_error = request_send (connreq, sock, NULL);
           request_free (&connreq);
           if (write_error < 0)
             {
