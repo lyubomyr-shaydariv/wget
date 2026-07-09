@@ -1269,7 +1269,7 @@ uerr_t
 retrieve_from_file (const char *file, bool html, int *count)
 {
   uerr_t status;
-  struct urlpos *url_list, *cur_url;
+  struct urlpos *url_list;
   struct iri *iri = iri_new();
 
   char *input_file, *url_file = NULL;
