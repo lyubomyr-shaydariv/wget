@@ -296,8 +296,8 @@ fd_read_body (const char *downloaded_filename, int fd, FILE *out, wgint toread, 
       gzbuf = xmalloc (gzbufsize);
       gzstream.zalloc = zalloc;
       gzstream.zfree = zfree;
-      gzstream.opaque = Z_NULL;
-      gzstream.next_in = Z_NULL;
+      gzstream.opaque = (void *) Z_NULL;
+      gzstream.next_in =(void *) Z_NULL;
       gzstream.avail_in = 0;
 
       #define GZIP_DETECT 32 /* gzip format detection */
