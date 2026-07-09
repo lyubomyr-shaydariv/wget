@@ -37,8 +37,6 @@ as that of the covered work.  */
 
 #include "unit-tests.h"
 
-extern const char *program_argstring;
-
 static int tests_run;
 
 static const char *
@@ -75,8 +73,6 @@ all_tests(void)
 
   return NULL;
 }
-
-extern const char *program_name; /* Needed by lib/error.c. */
 
 int
 main (int argc _GL_UNUSED, const char *argv[])
