@@ -131,7 +131,7 @@ do_conversion (const char *tocode, const char *fromcode, char const *in_org, siz
   iconv_t cd;
   /* sXXXav : hummm hard to guess... */
   size_t len, done, outlen;
-  int invalid = 0, tooshort = 0;
+  int invalid = 0;
   char *s, *in, *in_save;
 
   cd = iconv_open (tocode, fromcode);
@@ -196,7 +196,6 @@ do_conversion (const char *tocode, const char *fromcode, char const *in_org, siz
         }
       else if (errno == E2BIG) /* Output buffer full */
         {
-          tooshort++;
           done = len;
           len = done + inlen * 2;
           char *s_new = xrealloc (s, len + 1);
