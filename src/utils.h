@@ -92,6 +92,7 @@ char *unique_name_passthrough (const char *);
 char *unique_name (const char *);
 FILE *unique_create (const char *, bool, char **);
 FILE *fopen_excl (const char *, int);
+FILE *fopen_nofollow (const char *, const char *);
 FILE *fopen_stat (const char *, const char *, file_stats_t *);
 int   open_stat  (const char *, int, mode_t, file_stats_t *);
 char *file_merge (const char *, const char *);

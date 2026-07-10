@@ -1463,7 +1463,9 @@ Error in server response, closing control connection.\n"));
               fp = fopen (con->target, "a", FOPEN_OPT_ARGS);
             }
 #else /* def __VMS */
-          fp = fopen (con->target, "ab");
+          fp = fopen_nofollow (con->target, "ab");
+          if (!fp && errno == ENOENT)
+            fp = fopen_excl (con->target, BIN_TYPE_FILE);
 #endif /* def __VMS [else] */
         }
       else if (opt.noclobber || opt.always_rest || opt.timestamping || opt.dirstruct
@@ -1497,7 +1499,9 @@ Error in server response, closing control connection.\n"));
               fp = fopen (con->target, "w", FOPEN_OPT_ARGS);
             }
 #else /* def __VMS */
-          fp = fopen (con->target, "wb");
+          fp = fopen_nofollow (con->target, "wb");
+          if (!fp && errno == ENOENT)
+            fp = fopen_excl (con->target, BIN_TYPE_FILE);
 #endif /* def __VMS [else] */
         }
       else

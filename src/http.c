@@ -2585,7 +2585,9 @@ open_output_stream (struct http_stat *hs, int count, FILE **fp)
           open_id = 21;
           *fp = fopen (hs->local_file, "ab", FOPEN_OPT_ARGS);
 #else /* def __VMS */
-          *fp = fopen (hs->local_file, "ab");
+          *fp = fopen_nofollow (hs->local_file, "ab");
+          if (!*fp && errno == ENOENT)
+            *fp = fopen_excl (hs->local_file, FOPEN_BIN_FLAG);
 #endif /* def __VMS [else] */
         }
       else if (ALLOW_CLOBBER || count > 0)
@@ -2608,17 +2610,15 @@ open_output_stream (struct http_stat *hs, int count, FILE **fp)
 #else /* def __VMS */
           if (hs->temporary)
             {
-              int fd = open (hs->local_file, O_BINARY | O_CREAT | O_TRUNC | O_WRONLY, S_IRUSR | S_IWUSR);
-              if (fd == -1)
-                {
-                  logprintf (LOG_NOTQUIET, "%s: %s\n", hs->local_file, strerror (errno));
-                  return FOPENERR;
-                }
-              *fp = fdopen (fd, "wb");
+              *fp = fopen_nofollow (hs->local_file, "wb");
+              if (!*fp && errno == ENOENT)
+                *fp = fopen_excl (hs->local_file, FOPEN_BIN_FLAG);
             }
           else
             {
-              *fp = fopen (hs->local_file, "wb");
+              *fp = fopen_nofollow (hs->local_file, "wb");
+              if (!*fp && errno == ENOENT)
+                *fp = fopen_excl (hs->local_file, FOPEN_BIN_FLAG);
             }
 
 #endif /* def __VMS [else] */
