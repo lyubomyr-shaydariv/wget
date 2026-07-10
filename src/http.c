@@ -1485,9 +1485,15 @@ persistent_available_p (const char *host, int port, bool ssl,
   if (port != pconn.port)
     return false;
 
+  /* NTLM authentication is bound to the TCP connection.  Never reuse
+     an authorized connection for another HTTP hostname, even when the
+     names resolve to the same peer address. */
+  if (pconn.authorized && 0 != c_strcasecmp (host, pconn.host))
+    return false;
+
   /* If the host is the same, we're in business.  If not, there is
      still hope -- read below.  */
-  if (0 != strcasecmp (host, pconn.host))
+  if (0 != c_strcasecmp (host, pconn.host))
     {
       /* Check if pconn.socket is talking to HOST under another name.
          This happens often when both sites are virtual hosts
