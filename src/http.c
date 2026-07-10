@@ -413,15 +413,24 @@ request_free (struct request **req_ref)
 
 static struct hash_table *basic_authed_hosts;
 
-/* Find out if this host has issued a Basic challenge yet; if so, give
+/* Return a key for the HTTP origin that issued a Basic challenge.
+   Basic credentials must not be reused across a scheme or port boundary. */
+static char *
+basic_auth_key (const struct url *u)
+{
+  return aprintf ("%u:%d:%s", u->scheme, u->port, u->host);
+}
+
+/* Find out if this origin has issued a Basic challenge yet; if so, give
  * it the username, password. A temporary measure until we can get
  * proper authentication in place. */
 
 static bool
-maybe_send_basic_creds (const char *hostname, const char *user,
+maybe_send_basic_creds (const struct url *u, const char *user,
                         const char *passwd, struct request *req)
 {
   bool do_challenge = false;
+  char *key = basic_auth_key (u);
 
   if (opt.auth_without_challenge)
     {
@@ -429,16 +438,17 @@ maybe_send_basic_creds (const char *hostname, const char *user,
       do_challenge = true;
     }
   else if (basic_authed_hosts
-      && hash_table_contains (basic_authed_hosts, hostname))
+      && hash_table_contains (basic_authed_hosts, key))
     {
-      DEBUGP (("Found %s in basic_authed_hosts.\n", quote (hostname)));
+      DEBUGP (("Found %s in basic_authed_hosts.\n", quote (key)));
       do_challenge = true;
     }
   else
     {
-      DEBUGP (("Host %s has not issued a general basic challenge.\n",
-              quote (hostname)));
+      DEBUGP (("Origin %s has not issued a general basic challenge.\n",
+              quote (key)));
     }
+  xfree (key);
   if (do_challenge)
     {
       request_set_header (req, "Authorization",
@@ -449,17 +459,20 @@ maybe_send_basic_creds (const char *hostname, const char *user,
 }
 
 static void
-register_basic_auth_host (const char *hostname)
+register_basic_auth_host (const struct url *u)
 {
+  char *key = basic_auth_key (u);
   if (!basic_authed_hosts)
     {
       basic_authed_hosts = make_nocase_string_hash_table (1);
     }
-  if (!hash_table_contains (basic_authed_hosts, hostname))
+  if (!hash_table_contains (basic_authed_hosts, key))
     {
-      hash_table_put (basic_authed_hosts, xstrdup (hostname), NULL);
-      DEBUGP (("Inserted %s into basic_authed_hosts\n", quote (hostname)));
+      hash_table_put (basic_authed_hosts, key, NULL);
+      DEBUGP (("Inserted %s into basic_authed_hosts\n", quote (key)));
+      return;
     }
+  xfree (key);
 }
 
 /* Send the contents of FILE_NAME to SOCK.  Make sure that exactly
@@ -1985,7 +1998,7 @@ initialize_request (const struct url *u, struct http_stat *hs, int *dt, struct u
     {
       /* If this is a host for which we've already received a Basic
        * challenge, we'll go ahead and send Basic authentication creds. */
-      *basic_auth_finished = maybe_send_basic_creds (u->host, *user, *passwd, req);
+      *basic_auth_finished = maybe_send_basic_creds (u, *user, *passwd, req);
     }
 
   if (inhibit_keep_alive)
@@ -2509,9 +2522,9 @@ check_auth (const struct url *u, char *user, char *passwd, struct response *resp
                 ntlm_seen = true;
               else if (!u->user && BEGINS_WITH (www_authenticate, "Basic"))
                 {
-                  /* Need to register this host as using basic auth,
+                  /* Need to register this origin as using basic auth,
                    * so we automatically send creds next time. */
-                  register_basic_auth_host (u->host);
+                  register_basic_auth_host (u);
                 }
 
               *retry = true;
