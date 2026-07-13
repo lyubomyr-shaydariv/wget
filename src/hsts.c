@@ -390,17 +390,17 @@ hsts_match (hsts_store_t store, struct url *u)
 {
   bool url_changed = false;
   struct hsts_kh_info *entry = NULL;
-  struct hsts_kh *kh = xnew(struct hsts_kh);
+  struct hsts_kh kh = { 0 };
   enum hsts_kh_match match = NO_MATCH;
   int port = MAKE_EXPLICIT_PORT (u->scheme, u->port);
 
   /* avoid doing any computation if we're already in HTTPS */
   if (!hsts_is_scheme_valid (u->scheme))
     {
-      entry = hsts_find_entry (store, u->host, port, &match, kh);
-      if (entry)
+      for (;;)
         {
-          if ((entry->created + entry->max_age) >= time(NULL))
+          entry = hsts_find_entry (store, u->host, port, &match, &kh);
+          if (entry && (entry->created + entry->max_age) >= time(NULL))
             {
               if ((match == CONGRUENT_MATCH) ||
                   (match == SUPERDOMAIN_MATCH && entry->include_subdomains))
@@ -413,17 +413,25 @@ hsts_match (hsts_store_t store, struct url *u)
                   url_changed = true;
                   store->changed = true;
                 }
+              break;
             }
-          else
+          if (entry)
             {
-              hsts_remove_entry (store, kh);
+              hsts_remove_entry (store, &kh);
               store->changed = true;
             }
-        }
-      xfree (kh->host);
-    }
 
-  xfree (kh);
+          xfree (kh.host);
+          kh.host = NULL;
+
+          /* Port-zero entries are host-wide policies.  Nonzero entries
+             exist for tests, but must not prevent a host-wide match. */
+          if (port == 0)
+            break;
+          port = 0;
+        }
+      xfree (kh.host);
+    }
 
   return url_changed;
 }
@@ -784,9 +792,11 @@ test_hsts_url_rewrite_superdomain (void)
 
   TEST_URL_RW (s, "example.com", 80);
   TEST_URL_RW (s, "example.com.", 80);
+  TEST_URL_RW (s, "example.com", 8443);
   TEST_URL_RW (s, "rep.example.com", 80);
   TEST_URL_RW (s, "rep.rep.example.com", 80);
   TEST_URL_RW (s, "rep.rep.example.com.", 80);
+  TEST_URL_RW (s, "rep.rep.example.com", 8443);
 
   hsts_store_close (s);
   close_hsts_test_store (s);
@@ -808,6 +818,7 @@ test_hsts_url_rewrite_congruent (void)
 
   TEST_URL_RW (s, "foo.com", 80);
   TEST_URL_RW (s, "foo.com.", 80);
+  TEST_URL_RW (s, "foo.com", 8443);
   TEST_URL_NORW (s, "www.foo.com", 80);
 
   hsts_store_close (s);
