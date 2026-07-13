@@ -3196,7 +3196,8 @@ static bool
 unredirectable_headerline(const char *line)
 {
   return c_strncasecmp(line, "Authorization:", 14) == 0
-	  || c_strncasecmp(line, "Cookie:", 7) == 0;
+	  || c_strncasecmp(line, "Cookie:", 7) == 0
+	  || c_strncasecmp(line, "Proxy-Authorization:", 20) == 0;
 }
 
 /* Retrieve a document through HTTP protocol.  It recognizes status
