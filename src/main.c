@@ -123,23 +123,18 @@ int numurls = 0;
 #if defined(SIGHUP) || defined(SIGUSR1)
 /* Hangup signal handler.  When wget receives SIGHUP or SIGUSR1, it
    will proceed operation as usual, trying to write into a log file.
-   If that is impossible, the output will be turned off.  */
+   If that is impossible, the output will be turned off.
+
+   Only async-signal-safe operations are performed here.  The actual
+   redirect (which needs malloc/fopen) is deferred to
+   check_redirect_output(), called from the logging functions.  */
+
+volatile sig_atomic_t redirect_output_sig = 0;
 
 static void
 redirect_output_signal (int sig)
 {
-  const char *signal_name = "WTF?!";
-
-#ifdef SIGHUP
-  if (sig == SIGHUP)
-    signal_name = "SIGHUP";
-#endif
-#ifdef SIGUSR1
-  if (sig == SIGUSR1)
-    signal_name = "SIGUSR1";
-#endif
-
-  redirect_output (true,signal_name);
+  redirect_output_sig = sig;
   progress_schedule_redirect ();
   signal (sig, redirect_output_signal);
 }
