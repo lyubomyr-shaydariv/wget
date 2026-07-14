@@ -434,7 +434,7 @@ ArchLinux:
         - ./bootstrap
         - autoreconf -fi
         - touch .manywarnings
-        - ./configure $CONFIGURE_BASE_FLAGS --disable-ntlm
+        - ./configure $CONFIGURE_BASE_FLAGS
         - make -j$(nproc)
         - make check -j$(nproc)
     except:
